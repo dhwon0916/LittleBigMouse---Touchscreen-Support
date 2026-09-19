@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using HLab.Geo;
 using LittleBigMouse.Zoning;
 
@@ -59,6 +61,26 @@ public static class ZonesLayoutFactory
         zones.AdjustSpeed = layout.Options.AdjustSpeed;
 
         zones.TouchMouseIndependent = layout.Options.TouchMouseIndependent;
+        zones.RestoreKeyboardFocus = layout.Options.RestoreKeyboardFocus;
+        zones.FocusRestoreDelay = layout.Options.FocusRestoreDelay;
+        zones.FocusRestoreOnMouseMove = layout.Options.FocusRestoreOnMouseMove;
+        zones.TouchAllDisplays = layout.Options.TouchAllDisplays;
+        zones.TouchDisplayIds = layout.Options.TouchDisplayIds;
+        zones.TouchOverrideModifier = layout.Options.TouchOverrideModifier;
+        zones.FocusKeepApps = layout.Options.FocusKeepApps.Replace("\r", "").Replace("\n", ";");
+        zones.FocusRestoreApps = layout.Options.FocusRestoreApps.Replace("\r", "").Replace("\n", ";");
+        // Separate from cursor-routing zones: sensor panels excluded from the layout
+        // can still participate in touchscreen focus restoration.
+        if (!layout.Options.TouchAllDisplays)
+        {
+            var selected = layout.Options.TouchDisplayIds.Split(';');
+            zones.TouchDisplayBounds = string.Join(";", layout.PhysicalSources
+                .Where(s => s == s.Monitor.ActiveSource && s.Source.AttachedToDesktop
+                    && selected.Contains(s.Source.Id))
+                .Select(s => { var b = s.Source.InPixel.Bounds;
+                    return FormattableString.Invariant($"{b.Left},{b.Top},{b.Width},{b.Height}"); }));
+        }
+
         zones.RescueShortcut = layout.Options.RescueShortcut;
 
         zones.Algorithm = layout.Options.Algorithm;

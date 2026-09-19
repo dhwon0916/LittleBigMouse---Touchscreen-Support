@@ -39,6 +39,14 @@ public static class LayoutDtoMapper
         o.ShowMonitorActionWarning = dto.ShowMonitorActionWarning ?? o.ShowMonitorActionWarning;
         o.BorderValues = dto.BorderValues ?? o.BorderValues;
         o.TouchMouseIndependent = dto.TouchMouseIndependent ?? o.TouchMouseIndependent;
+        o.RestoreKeyboardFocus = dto.RestoreKeyboardFocus ?? o.RestoreKeyboardFocus;
+        o.FocusRestoreDelay = dto.FocusRestoreDelay ?? o.FocusRestoreDelay;
+        o.FocusRestoreOnMouseMove = dto.FocusRestoreOnMouseMove ?? o.FocusRestoreOnMouseMove;
+        o.TouchAllDisplays = dto.TouchAllDisplays ?? o.TouchAllDisplays;
+        o.TouchDisplayIds = dto.TouchDisplayIds ?? o.TouchDisplayIds;
+        o.TouchOverrideModifier = dto.TouchOverrideModifier ?? o.TouchOverrideModifier;
+        o.FocusKeepApps = dto.FocusKeepApps ?? o.FocusKeepApps;
+        o.FocusRestoreApps = dto.FocusRestoreApps ?? o.FocusRestoreApps;
         o.RescueShortcut = dto.RescueShortcut ?? o.RescueShortcut;
         o.HideTrayIcon = dto.HideTrayIcon ?? o.HideTrayIcon;
     }
@@ -189,6 +197,14 @@ public static class LayoutDtoMapper
         ShowMonitorActionWarning = o.ShowMonitorActionWarning,
         BorderValues = o.BorderValues,
         TouchMouseIndependent = o.TouchMouseIndependent,
+        RestoreKeyboardFocus = o.RestoreKeyboardFocus,
+        FocusRestoreDelay = o.FocusRestoreDelay,
+        FocusRestoreOnMouseMove = o.FocusRestoreOnMouseMove,
+        TouchAllDisplays = o.TouchAllDisplays,
+        TouchDisplayIds = o.TouchDisplayIds,
+        TouchOverrideModifier = o.TouchOverrideModifier,
+        FocusKeepApps = o.FocusKeepApps,
+        FocusRestoreApps = o.FocusRestoreApps,
         RescueShortcut = o.RescueShortcut,
         HideTrayIcon = o.HideTrayIcon,
         ExcludedDefaultsVersion = excludedDefaultsVersion

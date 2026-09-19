@@ -1,27 +1,43 @@
-//! Low-level mouse hook callback — port of `Hooker::MouseCallback`.
+//! Low-level mouse hook callback â€” port of `Hooker::MouseCallback`.
 //!
 //! The one genuinely hot, genuinely `unsafe` function. It dedups by previous
 //! location (C++ `static previousLocation`), then hands the position to the
 //! engine under a **non-blocking** `try_lock`: if the lock isn't free (a `Load`
-//! is swapping the layout), the event passes straight through — never blocking,
+//! is swapping the layout), the event passes straight through â€” never blocking,
 //! so the callback stays well under the `LowLevelHooksTimeout`. The whole body
 //! is wrapped in `catch_unwind` so a panic can't unwind across the FFI boundary.
 
 use std::cell::Cell;
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::Ordering;
 
 use windows::Win32::Foundation::{LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, GetCursorPos, HHOOK, LLMHF_INJECTED, MSLLHOOKSTRUCT, SetCursorPos,
+    CallNextHookEx, GetCursorPos, SetCursorPos, HHOOK, LLMHF_INJECTED, MSLLHOOKSTRUCT,
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
 };
 
 use crate::geometry::Point;
-use crate::hook::hot_path::{MoveDedup, count_event, route_move};
-use crate::hook::touch::{TouchResume, is_pen, is_touch};
+use crate::hook::hot_path::{count_event, route_move, MoveDedup};
+use crate::hook::touch::{is_pen, is_touch, TouchResume};
+use crate::hook::touch_policy::{Modifier, TouchGesture};
 use crate::platform::cursor::Win32Cursor;
 use crate::shared::SHARED;
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+};
+
+fn modifier_held(modifier: Modifier) -> bool {
+    let held = |key: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY|
+        unsafe { GetAsyncKeyState(key.0 as i32) } < 0;
+    match modifier {
+        Modifier::None => false,
+        Modifier::Ctrl => held(VK_CONTROL),
+        Modifier::Alt => held(VK_MENU),
+        Modifier::Shift => held(VK_SHIFT),
+        Modifier::Win => held(VK_LWIN) || held(VK_RWIN),
+    }
+}
 
 thread_local! {
     /// C++ `static previousLocation`. Thread-local because the callback only ever
@@ -31,6 +47,7 @@ thread_local! {
     static TOUCH: Cell<TouchResume> = const { Cell::new(TouchResume::new()) };
     static GENERATION: Cell<u32> = const { Cell::new(0) };
     static MOUSE_POSITION: Cell<Option<(i32, i32)>> = const { Cell::new(None) };
+    static GESTURE: Cell<TouchGesture> = const { Cell::new(TouchGesture::new()) };
 }
 
 fn cursor_position() -> Option<(i32, i32)> {
@@ -41,6 +58,8 @@ fn cursor_position() -> Option<(i32, i32)> {
 }
 
 pub fn reset() {
+    GESTURE.with(|v| v.set(TouchGesture::new()));
+    super::focus_restore::reset();
     TOUCH.with(|state| state.set(TouchResume::new()));
     PREV.with(|prev| prev.set(MoveDedup::new()));
     MOUSE_POSITION.with(|position| position.set(cursor_position()));
@@ -78,6 +97,25 @@ fn process(code: i32, wparam: WPARAM, lparam: LPARAM) -> bool {
             && !shared.suspended.load(Ordering::SeqCst)
         {
             if is_touch(ms.dwExtraInfo) {
+                let down = wparam.0 == WM_LBUTTONDOWN as usize;
+                let up = wparam.0 == WM_LBUTTONUP as usize;
+                let allowed = shared.touch_policy.try_lock().ok().is_some_and(|policy| {
+                    policy.includes(ms.pt.x, ms.pt.y) && !modifier_held(policy.modifier)
+                });
+                let accepted = GESTURE.with(|cell| {
+                    let mut gesture = cell.get();
+                    let accepted = gesture.accepts(allowed, down, up);
+                    cell.set(gesture);
+                    accepted
+                });
+                if !accepted {
+                    super::focus_restore::reset();
+                    TOUCH.with(|v| v.set(TouchResume::new()));
+                    MOUSE_POSITION.with(|v| v.set(Some((ms.pt.x, ms.pt.y))));
+                    count_event();
+                    return false;
+                }
+                super::focus_restore::on_touch(shared, wparam.0 as u32, ms.pt, ms.time);
                 // Use the last mouse position, including LBM's border warps.
                 // The OS cursor may already reflect a preceding touch message.
                 let cursor = MOUSE_POSITION.with(Cell::get);
@@ -94,11 +132,22 @@ fn process(code: i32, wparam: WPARAM, lparam: LPARAM) -> bool {
                 return false;
             }
             if is_pen(ms.dwExtraInfo) {
+                GESTURE.with(|v| v.set(TouchGesture::new()));
+                super::focus_restore::reset();
                 TOUCH.with(|cell| cell.set(TouchResume::new()));
                 MOUSE_POSITION.with(|position| position.set(Some((ms.pt.x, ms.pt.y))));
                 return false;
             }
             // Programmatic cursor motion must not consume the pending restore.
+            if ms.flags & LLMHF_INJECTED == 0
+                && shared.restore_keyboard_focus.load(Ordering::SeqCst)
+            {
+                super::focus_restore::on_physical_input(
+                    shared,
+                    wparam.0 == WM_MOUSEMOVE as usize,
+                    GESTURE.with(|v| v.get().contact),
+                );
+            }
             if ms.flags & LLMHF_INJECTED != 0 && TOUCH.with(|cell| cell.get().pending()) {
                 return false;
             }
@@ -152,8 +201,8 @@ fn process(code: i32, wparam: WPARAM, lparam: LPARAM) -> bool {
         return false;
     };
 
-    // The whole non-blocking route — contended lock passes through, poisoned lock
-    // is recovered, crossing counted — lives in the neutral `hot_path` core, so
+    // The whole non-blocking route â€” contended lock passes through, poisoned lock
+    // is recovered, crossing counted â€” lives in the neutral `hot_path` core, so
     // the Windows callback and the benchmark exercise the same decision.
     let mut env = Win32Cursor;
     let handled = route_move(&shared.engine, &mut env, Point::new(loc.0, loc.1)).handled();
@@ -168,7 +217,7 @@ fn process(code: i32, wparam: WPARAM, lparam: LPARAM) -> bool {
 }
 
 // The C++ hook filtered with `(wParam & WM_MOUSEMOVE) != 0`, but every mouse
-// message carries bit 0x200 (WM_LBUTTONDOWN = 0x201, WM_MOUSEWHEEL = 0x20A…):
+// message carries bit 0x200 (WM_LBUTTONDOWN = 0x201, WM_MOUSEWHEEL = 0x20Aâ€¦):
 // clicks and wheel events entered the engine as moves, and a click landing on
 // a border mid-crossing could be swallowed by the LRESULT(1) return.
 fn is_mouse_move_message(code: i32, wparam: WPARAM, lparam: LPARAM) -> bool {

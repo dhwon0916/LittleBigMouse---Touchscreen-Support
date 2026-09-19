@@ -7,6 +7,7 @@
 //! `WM_BREAK_LOOP` (re-reconcile) or `WM_QUIT` (stop).
 
 pub mod display;
+pub mod focus_restore;
 pub mod mouse;
 pub mod rescue_key;
 pub mod win_events;
@@ -42,6 +43,7 @@ pub fn register_main_thread(shared: &Shared) {
 /// Run the hook install/uninstall + message pump loop on this thread. Returns
 /// when a `Quit` command posts WM_QUIT.
 pub fn run(shared: &'static Shared) {
+    focus_restore::start(shared);
     let mut hooker = Hooker::new();
     hooker.run(shared);
 }
@@ -180,6 +182,7 @@ impl Hooker {
 
     /// C++ `Hooker::UnhookMouse`.
     fn unhook_mouse(&mut self, shared: &Shared) {
+        focus_restore::reset();
         if self.mouse_hook == HHOOK::default() {
             return;
         }
