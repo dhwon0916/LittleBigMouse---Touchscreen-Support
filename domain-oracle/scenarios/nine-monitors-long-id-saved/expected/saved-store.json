@@ -278,6 +278,7 @@
     "ShowMonitorActionWarning": true,
     "BorderValues": "PerModel",
     "RescueShortcut": "Ctrl+Alt+Shift+M",
+    "TouchMouseIndependent": false,
     "HideTrayIcon": false,
     "ExcludedDefaultsVersion": 2
   }

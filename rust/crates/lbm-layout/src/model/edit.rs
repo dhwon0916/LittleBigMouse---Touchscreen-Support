@@ -70,6 +70,7 @@ fn same_tracked_options(a: &LayoutOptions, b: &LayoutOptions) -> bool {
         && a.allow_discontinuity == b.allow_discontinuity
         && a.algorithm == b.algorithm
         && a.border_values == b.border_values
+        && a.touch_mouse_independent == b.touch_mouse_independent
         && a.rescue_shortcut == b.rescue_shortcut
         && a.excluded_list == b.excluded_list
 }

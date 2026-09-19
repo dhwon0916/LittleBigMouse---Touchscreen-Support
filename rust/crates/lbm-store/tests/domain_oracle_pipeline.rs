@@ -225,6 +225,7 @@ fn options(layout: &Layout) -> Value {
         "IsUnaryRatio": layout.is_unary_ratio(),
         "BorderValues": o.border_values,
         "RescueShortcut": o.rescue_shortcut,
+        "TouchMouseIndependent": o.touch_mouse_independent,
         "Priority": o.priority,
         "PriorityUnhooked": o.priority_unhooked,
         "AutoUpdate": o.auto_update,

@@ -76,6 +76,7 @@ pub fn compute_zones(layout: &Layout) -> ZonesLayout {
     zones.freelook_enabled = o.freelook_enabled;
     zones.adjust_pointer = o.adjust_pointer;
     zones.adjust_speed = o.adjust_speed;
+    zones.touch_mouse_independent = o.touch_mouse_independent;
     zones.rescue_shortcut = o.rescue_shortcut.clone();
     zones.algorithm = o.algorithm.clone();
     zones.priority = Some(o.priority.clone());

@@ -1,4 +1,4 @@
-﻿using HLab.Geo;
+using HLab.Geo;
 using LittleBigMouse.Zoning;
 
 namespace LittleBigMouse.DisplayLayout.Monitors.Extensions;
@@ -58,6 +58,7 @@ public static class ZonesLayoutFactory
         zones.AdjustPointer = layout.Options.AdjustPointer;
         zones.AdjustSpeed = layout.Options.AdjustSpeed;
 
+        zones.TouchMouseIndependent = layout.Options.TouchMouseIndependent;
         zones.RescueShortcut = layout.Options.RescueShortcut;
 
         zones.Algorithm = layout.Options.Algorithm;

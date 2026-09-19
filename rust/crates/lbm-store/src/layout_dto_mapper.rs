@@ -54,6 +54,7 @@ pub fn apply_global_options(o: &mut LayoutOptions, dto: Option<&GlobalOptionsDto
         &dto.show_monitor_action_warning,
     );
     keep(&mut o.border_values, &dto.border_values);
+    keep(&mut o.touch_mouse_independent, &dto.touch_mouse_independent);
     keep(&mut o.rescue_shortcut, &dto.rescue_shortcut);
     keep(&mut o.hide_tray_icon, &dto.hide_tray_icon);
 }
@@ -325,6 +326,7 @@ pub fn to_global_options_dto(
         vcp_control: Some(o.vcp_control),
         show_monitor_action_warning: Some(o.show_monitor_action_warning),
         border_values: Some(o.border_values.clone()),
+        touch_mouse_independent: Some(o.touch_mouse_independent),
         rescue_shortcut: Some(o.rescue_shortcut.clone()),
         hide_tray_icon: Some(o.hide_tray_icon),
         excluded_defaults_version,

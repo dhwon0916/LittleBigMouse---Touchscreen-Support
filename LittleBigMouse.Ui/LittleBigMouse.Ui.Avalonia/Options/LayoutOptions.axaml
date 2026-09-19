@@ -248,6 +248,14 @@
 						</StackPanel>
 					</Border>
 
+					<Border Classes="SettingCard" IsVisible="{Binding TouchMouseIndependentSupported}">
+						<controls:SettingRow Icon="{StaticResource Lbm.Icon.Mouse}"
+						                     Header="Keep mouse position after touch"
+						                     Description="After using the touchscreen, move the mouse to resume from its previous position.">
+							<ToggleSwitch IsChecked="{Binding Model.TouchMouseIndependent, Mode=TwoWay, FallbackValue=false}"/>
+						</controls:SettingRow>
+					</Border>
+
 					<Border Classes="SettingCard" IsVisible="{Binding RescueShortcutSupported}">
 						<StackPanel>
 							<controls:SettingRow Icon="{StaticResource Lbm.Icon.Shield}"

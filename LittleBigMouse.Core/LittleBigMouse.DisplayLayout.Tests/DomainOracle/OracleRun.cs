@@ -165,6 +165,7 @@ static class OracleRun
         ["IsUnaryRatio"] = o.IsUnaryRatio,
         ["BorderValues"] = o.BorderValues,
         ["RescueShortcut"] = o.RescueShortcut,
+        ["TouchMouseIndependent"] = o.TouchMouseIndependent,
         ["Priority"] = o.Priority,
         ["PriorityUnhooked"] = o.PriorityUnhooked,
         ["AutoUpdate"] = o.AutoUpdate,

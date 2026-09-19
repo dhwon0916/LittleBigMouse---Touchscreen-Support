@@ -34,6 +34,7 @@ public interface ILayoutOptions : INotifyPropertyChanged // Change IPropertyChan
       public bool AdjustSpeed { get; set; } = false;
       public string Algorithm { get; set; } = "Strait";
       public string BorderValues { get; set; } = "PerModel";
+      public bool TouchMouseIndependent { get; set; }
       public string RescueShortcut { get; set; } = "Ctrl+Alt+Shift+M";
       public string Priority { get; set; } = "Normal";
       public string PriorityUnhooked { get; set; } = "Below";
@@ -171,6 +172,7 @@ public interface ILayoutOptions : INotifyPropertyChanged // Change IPropertyChan
    /// Travels to the daemon with the layout, which is what registers it — see
    /// rust/crates/lbm-hook/src/shortcut.rs for the grammar both sides obey.
    /// </summary>
+   bool TouchMouseIndependent { get; set; }
    string RescueShortcut { get; set; }
 
 

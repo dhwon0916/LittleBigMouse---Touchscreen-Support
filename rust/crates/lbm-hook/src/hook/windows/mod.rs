@@ -156,6 +156,7 @@ impl Hooker {
 
     /// C++ `Hooker::HookMouse`.
     fn hook_mouse(&mut self, shared: &Shared) {
+        mouse::reset();
         match unsafe {
             SetWindowsHookExW(
                 WH_MOUSE_LL,

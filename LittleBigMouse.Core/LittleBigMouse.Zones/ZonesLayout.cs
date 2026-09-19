@@ -1,10 +1,11 @@
-﻿using HLab.Geo;
+using HLab.Geo;
 using System.Text.Json.Serialization;
 
 namespace LittleBigMouse.Zoning
 {
     public class ZonesLayout : IZonesSerializable
     {
+        public bool TouchMouseIndependent {get;set;}
         public bool AdjustPointer {get;set;}
         public bool AdjustSpeed {get;set;}
         public bool LoopX {get;set;}
@@ -69,6 +70,7 @@ namespace LittleBigMouse.Zoning
                 e => e.LoopY,
                 e => e.Virtual,
                 e => e.RescueShortcut,
+                e => e.TouchMouseIndependent,
                 e => e.Priority,
                 e => e.PriorityUnhooked,
                 e => e.Algorithm,

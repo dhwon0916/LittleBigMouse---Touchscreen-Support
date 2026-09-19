@@ -12,6 +12,7 @@
   "ShowMonitorActionWarning": false,
   "BorderValues": "PerMonitor",
   "RescueShortcut": "Ctrl\u002BAlt\u002BShift\u002BM",
+  "TouchMouseIndependent": false,
   "HideTrayIcon": true,
   "ExcludedDefaultsVersion": 2
 }

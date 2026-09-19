@@ -26,6 +26,7 @@ pub struct LayoutOptions {
     pub adjust_speed: bool,
     /// [`PER_MODEL`] or [`PER_MONITOR`].
     pub border_values: String,
+    pub touch_mouse_independent: bool,
     pub rescue_shortcut: String,
     pub priority: String,
     pub priority_unhooked: String,
@@ -62,6 +63,7 @@ impl Default for LayoutOptions {
             adjust_pointer: false,
             adjust_speed: false,
             border_values: PER_MODEL.to_owned(),
+            touch_mouse_independent: false,
             rescue_shortcut: "Ctrl+Alt+Shift+M".to_owned(),
             priority: "Normal".to_owned(),
             priority_unhooked: "Below".to_owned(),

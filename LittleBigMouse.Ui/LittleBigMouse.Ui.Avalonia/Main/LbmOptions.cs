@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.Serialization;
@@ -280,6 +280,14 @@ public class LbmOptions : SavableReactiveModel, ILayoutOptions
         set => SetUnsavedValue(ref _rescueShortcut, value);
     }
     string _rescueShortcut = "Ctrl+Alt+Shift+M";
+
+    [DataMember]
+    public bool TouchMouseIndependent
+    {
+        get => _touchMouseIndependent;
+        set => SetUnsavedValue(ref _touchMouseIndependent, value);
+    }
+    bool _touchMouseIndependent;
 
     public ObservableCollection<string> ExcludedList { get; } = new();
 

@@ -36,6 +36,8 @@ pub struct ZonesLayout {
     pub algorithm: Algorithm,
     pub priority: Priority,
     pub priority_unhooked: Priority,
+    /// Windows mouse resumes from its saved position after touchscreen input.
+    pub touch_mouse_independent: bool,
     /// The panic shortcut, as the UI spells it (`Ctrl+Alt+Shift+M`). Travels with
     /// the layout like every other daemon-side setting, so it reaches the daemon on
     /// the startup replay too. Empty means "whatever the daemon defaults to".
@@ -73,6 +75,7 @@ impl Default for ZonesLayout {
             algorithm: Algorithm::Strait,
             priority: Priority::Normal,
             priority_unhooked: Priority::Above,
+            touch_mouse_independent: false,
             rescue_shortcut: String::new(),
             loop_x: false,
             loop_y: false,
@@ -127,6 +130,7 @@ impl ZonesLayout {
         };
         layout.priority = Priority::parse(&get_string(el, "Priority"));
         layout.priority_unhooked = Priority::parse(&get_string(el, "PriorityUnhooked"));
+        layout.touch_mouse_independent = get_bool(el, "TouchMouseIndependent", false);
         layout.rescue_shortcut = get_string(el, "RescueShortcut");
 
         if let Some(main_zones) = child(el, "MainZones") {

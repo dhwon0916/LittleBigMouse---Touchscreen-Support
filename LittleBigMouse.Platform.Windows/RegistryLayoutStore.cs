@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System.Collections.Generic;
 using System.Linq;
 using LittleBigMouse.Plugins.Persistence;
@@ -81,6 +81,7 @@ public class RegistryLayoutStore : ILayoutStore
         // "ShowAttachDetachWarning" is the former name of the option, read as fallback.
         ShowMonitorActionWarning = root.TryGetBool("ShowMonitorActionWarning") ?? root.TryGetBool("ShowAttachDetachWarning"),
         BorderValues = root.TryGetString("BorderValues"),
+        TouchMouseIndependent = root.TryGetBool("TouchMouseIndependent"),
         RescueShortcut = root.TryGetString("RescueShortcut"),
         HideTrayIcon = root.TryGetBool("HideTrayIcon"),
         ExcludedDefaultsVersion = root.TryGetInt("ExcludedDefaultsVersion")
@@ -280,6 +281,7 @@ public class RegistryLayoutStore : ILayoutStore
         Set(root, "VcpControl", o.VcpControl);
         Set(root, "ShowMonitorActionWarning", o.ShowMonitorActionWarning);
         Set(root, "BorderValues", o.BorderValues);
+        Set(root, "TouchMouseIndependent", o.TouchMouseIndependent);
         Set(root, "RescueShortcut", o.RescueShortcut);
         Set(root, "HideTrayIcon", o.HideTrayIcon);
         Set(root, "ExcludedDefaultsVersion", o.ExcludedDefaultsVersion);

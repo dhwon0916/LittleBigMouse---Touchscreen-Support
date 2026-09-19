@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -147,6 +147,8 @@ public class LbmOptionsViewModel : ViewModel<ILayoutOptions>
     /// shown dead, so a Linux build has nothing that looks broken.
     /// </summary>
     public bool RescueShortcutSupported => OperatingSystem.IsWindows();
+
+    public bool TouchMouseIndependentSupported => OperatingSystem.IsWindows();
 
     /// <summary>Empty while the rescue shortcut is registered and working.</summary>
     public string ShortcutWarning

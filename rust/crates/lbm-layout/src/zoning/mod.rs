@@ -111,6 +111,7 @@ pub struct ZonesLayout {
     pub loop_y: bool,
     /// Zones of a virtual layout: the daemon refuses to hook them.
     pub virtual_layout: bool,
+    pub touch_mouse_independent: bool,
     pub rescue_shortcut: String,
     pub priority: Option<String>,
     pub priority_unhooked: Option<String>,
@@ -132,6 +133,7 @@ impl Default for ZonesLayout {
             loop_x: false,
             loop_y: false,
             virtual_layout: false,
+            touch_mouse_independent: false,
             rescue_shortcut: String::new(),
             priority: None,
             priority_unhooked: None,

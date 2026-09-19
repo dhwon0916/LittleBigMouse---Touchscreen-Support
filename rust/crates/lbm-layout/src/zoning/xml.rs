@@ -139,6 +139,7 @@ pub(super) fn serialize(layout: &ZonesLayout) -> String {
         .boolean("LoopY", layout.loop_y)
         .boolean("Virtual", layout.virtual_layout)
         .string("RescueShortcut", Some(&layout.rescue_shortcut))
+        .boolean("TouchMouseIndependent", layout.touch_mouse_independent)
         .string("Priority", layout.priority.as_deref())
         .string("PriorityUnhooked", layout.priority_unhooked.as_deref())
         .string("Algorithm", Some(&layout.algorithm))

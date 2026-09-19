@@ -30,6 +30,7 @@
     "IsUnaryRatio": false,
     "BorderValues": "PerModel",
     "RescueShortcut": "Ctrl+Alt+Shift+M",
+    "TouchMouseIndependent": false,
     "Priority": "Normal",
     "PriorityUnhooked": "Below",
     "AutoUpdate": false,

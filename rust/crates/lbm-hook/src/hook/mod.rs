@@ -20,6 +20,7 @@ use crate::shared::Shared;
 /// Platform-neutral core of the per-report hot path (dedup, non-blocking route),
 /// shared by the Windows callback and exercised by `benches/mouse_hook.rs`.
 pub mod hot_path;
+pub mod touch;
 
 #[cfg(windows)]
 pub mod windows;
