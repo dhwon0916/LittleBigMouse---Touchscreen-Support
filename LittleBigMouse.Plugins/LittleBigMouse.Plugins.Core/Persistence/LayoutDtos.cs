@@ -30,6 +30,7 @@ public class GlobalOptionsDto
     public string? BorderValues { get; set; }
     public string? RescueShortcut { get; set; }
     public bool? TouchMouseIndependent { get; set; }
+    public bool? StylusMouseIndependent { get; set; }
     public bool? RestoreKeyboardFocus { get; set; }
     public int? FocusRestoreDelay { get; set; }
     public bool? FocusRestoreOnMouseMove { get; set; }

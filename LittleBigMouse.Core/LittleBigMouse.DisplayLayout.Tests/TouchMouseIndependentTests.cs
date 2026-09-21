@@ -16,6 +16,7 @@ public class TouchMouseIndependentTests
         var options = new ILayoutOptions.Design();
         LayoutDtoMapper.Apply(options, new GlobalOptionsDto());
         Assert.False(options.TouchMouseIndependent);
+        Assert.False(options.StylusMouseIndependent);
 
         Assert.False(options.RestoreKeyboardFocus);
         Assert.Equal(120, options.FocusRestoreDelay);
@@ -29,14 +30,17 @@ public class TouchMouseIndependentTests
     [InlineData(false)]
     public void SettingSurvivesPersistenceAndReachesWire(bool enabled)
     {
-        var options = new ILayoutOptions.Design { TouchMouseIndependent = enabled, RestoreKeyboardFocus = enabled };
+        var options = new ILayoutOptions.Design { TouchMouseIndependent = enabled, StylusMouseIndependent = enabled, RestoreKeyboardFocus = enabled };
         var saved = LayoutDtoMapper.ToGlobalOptionsDto(options, null);
         var restored = new ILayoutOptions.Design { TouchMouseIndependent = !enabled, RestoreKeyboardFocus = !enabled };
         LayoutDtoMapper.Apply(restored, saved);
         Assert.Equal(enabled, restored.TouchMouseIndependent);
+        Assert.Equal(enabled, restored.StylusMouseIndependent);
         Assert.Equal(enabled, restored.RestoreKeyboardFocus);
         using var layout = new MonitorsLayout(restored);
         var zones = layout.ComputeZones();
+        Assert.Equal(enabled.ToString(),
+            XDocument.Parse(zones.Serialize()).Root!.Attribute("StylusMouseIndependent")!.Value);
         Assert.Equal(enabled.ToString(),
             XDocument.Parse(zones.Serialize()).Root!.Attribute("TouchMouseIndependent")!.Value);
         Assert.Equal(enabled.ToString(),

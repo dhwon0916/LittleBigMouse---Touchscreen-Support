@@ -13,6 +13,7 @@
   "BorderValues": "PerMonitor",
   "RescueShortcut": "Ctrl\u002BAlt\u002BShift\u002BM",
   "TouchMouseIndependent": false,
+  "StylusMouseIndependent": false,
   "RestoreKeyboardFocus": false,
   "FocusRestoreDelay": 120,
   "FocusRestoreOnMouseMove": false,

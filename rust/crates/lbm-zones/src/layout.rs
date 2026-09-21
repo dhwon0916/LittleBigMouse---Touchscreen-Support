@@ -38,6 +38,7 @@ pub struct ZonesLayout {
     pub priority_unhooked: Priority,
     /// Windows mouse resumes from its saved position after touchscreen input.
     pub touch_mouse_independent: bool,
+    pub stylus_mouse_independent: bool,
     pub restore_keyboard_focus: bool,
     pub focus_restore_delay: i32,
     pub focus_restore_on_mouse_move: bool,
@@ -85,6 +86,7 @@ impl Default for ZonesLayout {
             priority: Priority::Normal,
             priority_unhooked: Priority::Above,
             touch_mouse_independent: false,
+            stylus_mouse_independent: false,
             restore_keyboard_focus: false,
             focus_restore_delay: 120,
             focus_restore_on_mouse_move: false,
@@ -149,6 +151,7 @@ impl ZonesLayout {
         layout.priority = Priority::parse(&get_string(el, "Priority"));
         layout.priority_unhooked = Priority::parse(&get_string(el, "PriorityUnhooked"));
         layout.touch_mouse_independent = get_bool(el, "TouchMouseIndependent", false);
+        layout.stylus_mouse_independent = get_bool(el, "StylusMouseIndependent", false);
         layout.restore_keyboard_focus = get_bool(el, "RestoreKeyboardFocus", false);
         layout.focus_restore_delay = el
             .attribute("FocusRestoreDelay")

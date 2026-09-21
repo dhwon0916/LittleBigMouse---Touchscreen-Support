@@ -245,6 +245,7 @@
     "BorderValues": "PerModel",
     "RescueShortcut": "Ctrl+Alt+Shift+M",
     "TouchMouseIndependent": false,
+    "StylusMouseIndependent": false,
     "RestoreKeyboardFocus": false,
     "FocusRestoreDelay": 120,
     "FocusRestoreOnMouseMove": false,

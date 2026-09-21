@@ -81,6 +81,8 @@ pub struct GlobalOptionsDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub touch_mouse_independent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub stylus_mouse_independent: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub restore_keyboard_focus: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub focus_restore_delay: Option<i32>,

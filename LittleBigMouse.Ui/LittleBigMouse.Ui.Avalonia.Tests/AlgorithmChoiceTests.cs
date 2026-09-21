@@ -134,6 +134,17 @@ public class AlgorithmChoiceTests
         GC.KeepAlive(collector);
     }
 
+    [Fact]
+    public void StylusOptInMarksOptionsUnsavedWithoutEnablingOtherFeatures()
+    {
+        var model = new LbmOptions { Saved = true };
+        Assert.False(model.StylusMouseIndependent);
+        model.StylusMouseIndependent = true;
+        Assert.False(model.Saved);
+        Assert.False(model.TouchMouseIndependent);
+        Assert.False(model.RestoreKeyboardFocus);
+    }
+
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     static WeakReference[] CreateAndDisposeOptions(FakeDaemon daemon, FakeMainService main,
         FakeProcessesCollector collector)

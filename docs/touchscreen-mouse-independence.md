@@ -5,23 +5,35 @@ Tap or drag on a touchscreen, lift your finger, then move the physical mouse.
 That first movement returns the pointer to its previous mouse position; subsequent
 movement uses LittleBigMouse's normal monitor crossing and DPI behavior.
 
-This first implementation is integrated into the UI and Rust daemon. Both must be
+The feature is integrated into the UI and Rust daemon. Both must be
 rebuilt together; it is not a DLL that can be copied into an existing installation.
 The option defaults to off. Older configuration files continue to work.
 
 ## Behavior and limits
 
 - Touch-promoted mouse messages pass through without monitor remapping or suppression.
+- Native touchscreen HID reports also cover apps that consume touch directly,
+  including Electron AppBar widgets. The observer neither suppresses nor redirects input.
 - Repeated taps preserve the original mouse position until the mouse resumes.
 - A touch drag delays restoration until its promoted left-button release.
 - The first physical mouse movement is consumed to restore the saved position.
+- Restoration clears stale crossing state and releases only LittleBigMouse's own
+  cursor clip. Another application's confinement remains in effect.
 - Move the mouse before clicking or scrolling after touch. A physical button or
   wheel event instead accepts the current position and cancels restoration.
-- Pen input cancels restoration. Injected mouse events do not trigger restoration.
+- Pen input cancels restoration unless **Include stylus** is enabled. Injected
+  mouse events do not trigger restoration.
 - Disabling the option, reloading a layout, reinstalling the hook, or switching
   desktops discards any pending restoration. Existing stop/rescue behavior applies.
 - Keyboard focus is unchanged unless **Restore keyboard focus after touch** is also
   enabled. This is sequential touch/mouse use, not multiple simultaneous pointers.
+
+Native focus restoration decodes HID tip switches and contact counts, including
+frames split across multiple reports. Once all fingers are released, it waits 50 ms
+for Windows to finish relocating the cursor, then uses the normal focus delay and
+app rules. Unsupported contact formats retain mouse restoration but do not trigger
+automatic focus changes. Moving the mouse before this settling step cancels the
+native focus request.
 
 ## Optional keyboard-focus restoration
 
@@ -36,7 +48,7 @@ Newer touch releases can schedule a fresh attempt. A closed, hidden, or minimize
 original window is not activated. This restores the foreground app, not the specific
 text field when touching two controls inside the same app.
 
-The second preview captures the native editor control as well as its parent window.
+The focus-restoration worker captures the native editor control as well as its parent window.
 Its worker briefly connects the relevant input queues with `AttachThreadInput`,
 calls `SetForegroundWindow` and `SetFocus`, verifies the focus, and detaches on every
 exit path. It skips windows with active menus/capture, held modifiers/buttons, or
@@ -44,7 +56,8 @@ an unresponsive app. No synthetic keystrokes or global keyboard hooks are used.
 Custom UI frameworks without a native editor handle still rely on their own focus
 restoration when activated. Windows can still refuse an activation.
 
-The worker writes bounded diagnostic status to
+Set `LBM_TOUCH_TRACE=1` before starting the daemon to enable bounded focus diagnostics.
+Logging is off by default. When enabled, the worker writes status to
 `%LOCALAPPDATA%\\Mgth\\LittleBigMouse\\TouchFocus.log`. It records numeric window
 handles and idle timestamps, never text, titles, or keystrokes. A
 `touch-options worker started` entry identifies this version; subsequent entries
@@ -55,21 +68,24 @@ app on the touchscreen, lift your finger, wait half a second, and type. Text sho
 go to Notepad. Also verify that disabling the switch leaves typing in the touched
 app, and that closing Notepad or deliberately switching elsewhere cancels restoration.
 
-The keyboard-focus feature has compiled and passed its automated guard, persistence,
-and protocol tests. The second preview also passes an interactive Windows test
-that restores a native editor from a separate background process. The touchscreen
-event timing still needs user verification.
-
 Detection uses Windows' documented touch signature in promoted mouse events:
 [System Events and Mouse Messages](https://learn.microsoft.com/en-us/windows/win32/tablet/system-events-and-mouse-messages).
-Drivers, remote sessions, or applications that do not produce these tagged events
-need hardware testing and may require a different input backend.
+For native touch, the daemon registers the touchscreen HID collection with
+`RIDEV_INPUTSINK` and checks cursor suppression. This also counts native activity
+toward the watchdog, preventing false hook reinstalls that discard the saved position.
 
 ## Touchscreen preferences
 
 All preferences are under Options, in the touchscreen card. Apply/save the layout
 after editing. Old layouts retain the previous behavior: all displays, 120 ms,
 restoration after finger-up, no override key, and no app rules.
+
+- **Include stylus:** opt in to mouse-position independence for Windows-tagged pen
+  input, using the same display selection, modifier, and focus rules. Pen hover
+  preserves the mouse anchor without triggering focus restoration; a pen tap
+  schedules restoration after release. This option requires the master touch
+  option and defaults to off. Apps or drivers that consume pen input without
+  emitting tagged mouse events are not covered by the touchscreen-only HID observer.
 
 - **Restore when the mouse moves:** retains the touched app's keyboard focus
   until a physical mouse move after finger-up. The return attempt is immediate;
@@ -85,6 +101,8 @@ restoration after finger-up, no override key, and no app rules.
   before tapping to bypass both touch features through that gesture, even if the
   modifier is released before finger-up. The modifier is not swallowed and may
   also affect the touched app's normal behavior.
+  The native fallback cancels the pending burst if it observes the modifier before
+  physical mouse resumption; display selection is checked at resumption.
 - **Per-app focus rules:** semicolon-separated executable basenames, matched
   exactly without case sensitivity (e.g. chrome.exe; notepad.exe). The keep-focus
   list wins. The restore-only list restricts restoration to listed apps; leaving
@@ -99,6 +117,12 @@ block, waiting for movement, click cancellation, and restoration of a native edi
 across processes. Actual touchscreen event timing still needs hardware verification.
 
 ## Validation
+
+The Windows mouse hook delegates touch handling to `windows/touch_input.rs`.
+`windows/native_touch.rs` handles raw-input registration and device validation;
+the platform-independent touch and focus modules own state and policy. Pending
+restoration survives engine-lock contention and is cleared only after a completed
+warp. No mutable borrow spans a Win32 call that can re-enter the hook.
 
 Required build dependencies: .NET SDK 10 (see `global.json`), a Rust toolchain with
 Windows build tools, and the repository's HLab.Core / HLab.Avalonia submodules.
@@ -132,4 +156,8 @@ Hardware acceptance checks (still required):
    and the rescue shortcut while a restoration is pending.
 7. Restart LittleBigMouse and confirm the saved option is retained.
 
-The user confirmed mouse-position independence works on their touchscreen setup. The Rust hook, layout, and store regression suites pass, as do all 365 C# display-layout tests. The remaining hardware acceptance cases above have not all been verified.
+The user confirmed ordinary touchscreen restoration and the native AppBar fix.
+The temporary per-move diagnostic recorder has been removed from the production
+hook. Automated tests include mixed native/promoted input, injected movement,
+busy-engine retries, and cancellation. Hardware acceptance should be repeated
+after refactoring; automated tests do not prove Windows input delivery.

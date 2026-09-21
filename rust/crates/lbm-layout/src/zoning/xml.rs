@@ -140,6 +140,7 @@ pub(super) fn serialize(layout: &ZonesLayout) -> String {
         .boolean("Virtual", layout.virtual_layout)
         .string("RescueShortcut", Some(&layout.rescue_shortcut))
         .boolean("TouchMouseIndependent", layout.touch_mouse_independent)
+        .boolean("StylusMouseIndependent", layout.stylus_mouse_independent)
         .boolean("RestoreKeyboardFocus", layout.restore_keyboard_focus)
         .int("FocusRestoreDelay", layout.focus_restore_delay)
         .boolean(

@@ -29,12 +29,91 @@ static COMPLETED: AtomicU64 = AtomicU64::new(0);
 static RESOLVED: AtomicU64 = AtomicU64::new(0);
 
 thread_local! {
+    static NATIVE_CAPTURE: Cell<Option<NativeCapture>> = const { Cell::new(None) };
     static ORIGIN: Cell<Option<FocusSnapshot>> = const { Cell::new(None) };
     static PREVIOUS: Cell<Option<FocusSnapshot>> = const { Cell::new(None) };
     static LAST_REQUEST: Cell<u64> = const { Cell::new(0) };
     static RELEASED: Cell<bool> = const { Cell::new(false) };
     static DEFERRED: Cell<Option<RestoreRequest>> = const { Cell::new(None) };
     static DEFERRED_FIRST: Cell<u64> = const { Cell::new(0) };
+}
+
+#[derive(Clone, Copy)]
+struct NativeCapture {
+    current: Option<FocusSnapshot>,
+    previous: Option<FocusSnapshot>,
+    generation: u32,
+    input_time: Option<u32>,
+    contact: bool,
+}
+
+pub fn cancel_native() {
+    NATIVE_CAPTURE.with(|capture| capture.set(None));
+}
+
+/// Capture before Windows has necessarily updated the cursor or foreground.
+/// Returns true only on a down-to-up transition, to schedule position settling.
+pub fn native_contact(shared: &Shared, contact: bool) -> bool {
+    if !active(shared) {
+        cancel_native();
+        return false;
+    }
+    let mut capture = NATIVE_CAPTURE.with(Cell::get);
+    if contact && capture.is_none_or(|c| !c.contact) {
+        let previous = PREVIOUS.with(Cell::get);
+        let current = focus_snapshot().map(|mut current| {
+            // A nonactivating panel can clear editor focus while leaving the
+            // original foreground window unchanged. Retain its last editor.
+            if current.control.is_none() {
+                current.control = previous
+                    .filter(|p| p.window == current.window)
+                    .and_then(|p| p.control);
+            }
+            current
+        });
+        capture = Some(NativeCapture {
+            current,
+            previous,
+            generation: shared.touch_generation.load(Ordering::SeqCst),
+            input_time: last_input_time(),
+            contact: true,
+        });
+        SEQUENCE.fetch_add(1, Ordering::SeqCst);
+        trace("native touch: captured original focus");
+    }
+    let Some(mut capture) = capture else {
+        return false;
+    };
+    if !contact && !capture.contact {
+        return false;
+    }
+    let released = capture.contact && !contact;
+    capture.contact = contact;
+    capture.input_time = last_input_time();
+    NATIVE_CAPTURE.with(|v| v.set(Some(capture)));
+    released
+}
+
+/// Called after a short cursor-settling interval, on the same message-pump thread.
+pub fn finish_native(shared: &Shared, point: POINT) {
+    let Some(capture) = NATIVE_CAPTURE.with(|v| v.take()) else {
+        return;
+    };
+    if capture.contact
+        || !active(shared)
+        || capture.generation != shared.touch_generation.load(Ordering::SeqCst)
+        || capture.input_time != last_input_time()
+    {
+        trace(
+            "native touch: cancelled before settled release (contact, state, generation, or input)",
+        );
+        return;
+    }
+    let touched = identity(unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) });
+    ORIGIN.with(|v| v.set(before_touch(capture.current, capture.previous, touched)));
+    LAST_REQUEST.with(|v| v.set(0));
+    trace("native touch: scheduling settled release");
+    on_touch(shared, WM_LBUTTONUP, point, 0);
 }
 
 fn hwnd(identity: WindowIdentity) -> HWND {
@@ -82,11 +161,8 @@ fn last_input_time() -> Option<u32> {
 
 fn active(shared: &Shared) -> bool {
     shared.restore_keyboard_focus.load(Ordering::SeqCst)
-        && shared.touch_mouse_independent.load(Ordering::SeqCst)
-        && shared.want_hook.load(Ordering::SeqCst)
+        && shared.touch_active()
         && shared.hooked.load(Ordering::SeqCst)
-        && !shared.paused.load(Ordering::SeqCst)
-        && !shared.suspended.load(Ordering::SeqCst)
 }
 
 fn eligible(shared: &Shared, request: &RestoreRequest) -> bool {
@@ -226,6 +302,10 @@ fn restore(shared: &Shared, request: &RestoreRequest) -> &'static str {
 
 /// Worker-only bounded diagnostic file. No titles, text, or keystrokes are logged.
 fn trace(message: &str) {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    if !*ENABLED.get_or_init(|| std::env::var_os("LBM_TOUCH_TRACE").is_some()) {
+        return;
+    }
     let Some(path) = crate::platform::paths::lbm_data_file("TouchFocus.log") else {
         return;
     };
@@ -253,13 +333,18 @@ pub fn start(shared: &'static Shared) {
         return;
     }
     std::thread::spawn(move || {
-        trace("touch-options worker started");
+        let tracing = std::env::var_os("LBM_TOUCH_TRACE").is_some();
+        if tracing {
+            trace("touch-options worker started");
+        }
         while let Ok(mut request) = receiver.recv() {
             while let Ok(newer) = receiver.try_recv() {
                 request = newer;
             }
             if request.sequence != SEQUENCE.load(Ordering::SeqCst) {
-                trace("skipped: superseded request before delay");
+                if tracing {
+                    trace("skipped: superseded request before delay");
+                }
                 COMPLETED.fetch_max(request.sequence, Ordering::SeqCst);
                 continue;
             }
@@ -298,19 +383,22 @@ pub fn start(shared: &'static Shared) {
                 RESOLVED.fetch_max(request.sequence, Ordering::SeqCst);
             }
 
-            trace(&format!(
+            if tracing {
+                trace(&format!(
                 "request={} result={} origin={} touched={} editor={} input_sample={:?} input_now={:?} foreground={:?} sequence={} active={}",
                 request.sequence, result, request.origin.handle, request.touched.handle,
                 request.control.map(|c| c.handle).unwrap_or(0), request.input_time, last_input_time(),
                 identity(unsafe { GetForegroundWindow() }).map(|w| w.handle),
                 SEQUENCE.load(Ordering::SeqCst), active(shared),
             ));
+            }
             COMPLETED.fetch_max(request.sequence, Ordering::SeqCst);
         }
     });
 }
 
 pub fn reset() {
+    cancel_native();
     SEQUENCE.fetch_add(1, Ordering::SeqCst);
     ORIGIN.with(|origin| origin.set(None));
     LAST_REQUEST.with(|request| request.set(0));
@@ -593,6 +681,17 @@ mod tests {
             .into_owned();
         *shared.touch_policy.lock().unwrap() =
             std::sync::Arc::new(crate::hook::touch_policy::TouchPolicy::from_layout(&layout));
+        assert!(
+            eligible(shared, &request),
+            "fixture changed before restoration: active={}, input={:?}/{}, foreground={:?}/{:?}, generation={}, sequence={}",
+            active(shared),
+            last_input_time(),
+            request.input_time,
+            identity(unsafe { GetForegroundWindow() }),
+            request.touched,
+            shared.touch_generation.load(Ordering::SeqCst),
+            SEQUENCE.load(Ordering::SeqCst)
+        );
         assert_eq!(
             restore(shared, &request),
             "skipped: touched app focus rule or identity"
@@ -660,6 +759,39 @@ mod tests {
         DEFERRED.with(|pending| pending.set(Some(deferred)));
         on_physical_input(shared, true, false);
         wait_for_editor();
+
+        // Native touch captures the original editor before cursor relocation;
+        // release resolves the touched window and uses the same guarded worker.
+        reset();
+        layout.focus_restore_on_mouse_move = false;
+        layout.focus_restore_delay = 80;
+        *shared.touch_policy.lock().unwrap() =
+            std::sync::Arc::new(crate::hook::touch_policy::TouchPolicy::from_layout(&layout));
+        assert!(!native_contact(shared, true));
+        let queue = InputAttachment::new(request.touched.thread);
+        unsafe {
+            let _ = SetForegroundWindow(hwnd(request.touched));
+        }
+        drop(queue);
+        assert!(native_contact(shared, false));
+        assert!(!native_contact(shared, false)); // duplicate release cannot re-arm
+        let mut rect = windows::Win32::Foundation::RECT::default();
+        unsafe {
+            windows::Win32::UI::WindowsAndMessaging::GetWindowRect(
+                hwnd(request.touched),
+                &mut rect,
+            )
+            .unwrap();
+        }
+        finish_native(
+            shared,
+            POINT {
+                x: rect.left + 40,
+                y: rect.top + 60,
+            },
+        );
+        wait_for_editor();
+        println!("Native touch release restored the original editor");
 
         // Exercise queue attachment/detachment and process-handle ownership in
         // the production restoration path after the worker has warmed up.

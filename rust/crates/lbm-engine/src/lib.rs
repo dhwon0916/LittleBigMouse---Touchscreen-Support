@@ -133,6 +133,19 @@ impl MouseEngine {
         self.managed_clip_rect = Rect::empty();
     }
 
+    /// Return from touch without treating the absolute jump as a monitor crossing.
+    /// Release only our own temporary confinement before asking Windows to warp.
+    pub fn resume_after_touch(
+        &mut self,
+        env: &mut impl CursorEnv,
+        target: Point<i32>,
+    ) -> Point<i32> {
+        self.restore_managed_clip(env);
+        self.reset();
+        env.set_mouse_location(target);
+        env.get_mouse_location()
+    }
+
     // --- entry: freelook gate + dispatch (C++ MouseEngine::OnMouseMove) -------
 
     pub fn on_mouse_move<E: CursorEnv>(&mut self, env: &mut E, e: &mut MouseEventArg) {

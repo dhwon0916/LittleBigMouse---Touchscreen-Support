@@ -256,6 +256,11 @@
 							<ToggleSwitch IsChecked="{Binding Model.TouchMouseIndependent, Mode=TwoWay, FallbackValue=false}"/>
 						</controls:SettingRow>
                         <StackPanel IsVisible="{Binding Model.TouchMouseIndependent, FallbackValue=false}">
+                            <Border Classes="SettingSeparator"/>
+                            <controls:SettingRow Header="Include stylus"
+                                Description="Keep the mouse position after pen use and apply the same typing-focus settings. Off by default.">
+                                <ToggleSwitch IsChecked="{Binding Model.StylusMouseIndependent, Mode=TwoWay, FallbackValue=false}"/>
+                            </controls:SettingRow>
 						<Border Classes="SettingSeparator"/>
 						<controls:SettingRow Icon="{StaticResource Lbm.Icon.Mouse}"
 						                     Header="Restore keyboard focus after touch"

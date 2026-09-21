@@ -82,6 +82,7 @@ public class RegistryLayoutStore : ILayoutStore
         ShowMonitorActionWarning = root.TryGetBool("ShowMonitorActionWarning") ?? root.TryGetBool("ShowAttachDetachWarning"),
         BorderValues = root.TryGetString("BorderValues"),
         TouchMouseIndependent = root.TryGetBool("TouchMouseIndependent"),
+        StylusMouseIndependent = root.TryGetBool("StylusMouseIndependent"),
         RestoreKeyboardFocus = root.TryGetBool("RestoreKeyboardFocus"),
         FocusRestoreDelay = root.TryGetInt("FocusRestoreDelay"),
         FocusRestoreOnMouseMove = root.TryGetBool("FocusRestoreOnMouseMove"),
@@ -290,6 +291,7 @@ public class RegistryLayoutStore : ILayoutStore
         Set(root, "ShowMonitorActionWarning", o.ShowMonitorActionWarning);
         Set(root, "BorderValues", o.BorderValues);
         Set(root, "TouchMouseIndependent", o.TouchMouseIndependent);
+        Set(root, "StylusMouseIndependent", o.StylusMouseIndependent);
         Set(root, "RestoreKeyboardFocus", o.RestoreKeyboardFocus);
         Set(root, "FocusRestoreDelay", o.FocusRestoreDelay);
         Set(root, "FocusRestoreOnMouseMove", o.FocusRestoreOnMouseMove);

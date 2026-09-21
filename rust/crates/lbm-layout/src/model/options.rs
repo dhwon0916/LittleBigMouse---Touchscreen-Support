@@ -27,6 +27,7 @@ pub struct LayoutOptions {
     /// [`PER_MODEL`] or [`PER_MONITOR`].
     pub border_values: String,
     pub touch_mouse_independent: bool,
+    pub stylus_mouse_independent: bool,
     pub restore_keyboard_focus: bool,
     pub focus_restore_delay: i32,
     pub focus_restore_on_mouse_move: bool,
@@ -72,6 +73,7 @@ impl Default for LayoutOptions {
             adjust_speed: false,
             border_values: PER_MODEL.to_owned(),
             touch_mouse_independent: false,
+            stylus_mouse_independent: false,
             restore_keyboard_focus: false,
             focus_restore_delay: 120,
             focus_restore_on_mouse_move: false,

@@ -166,6 +166,7 @@ static class OracleRun
         ["BorderValues"] = o.BorderValues,
         ["RescueShortcut"] = o.RescueShortcut,
         ["TouchMouseIndependent"] = o.TouchMouseIndependent,
+        ["StylusMouseIndependent"] = o.StylusMouseIndependent,
         ["RestoreKeyboardFocus"] = o.RestoreKeyboardFocus,
         ["FocusRestoreDelay"] = o.FocusRestoreDelay,
         ["FocusRestoreOnMouseMove"] = o.FocusRestoreOnMouseMove,

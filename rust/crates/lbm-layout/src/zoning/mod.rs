@@ -112,6 +112,7 @@ pub struct ZonesLayout {
     /// Zones of a virtual layout: the daemon refuses to hook them.
     pub virtual_layout: bool,
     pub touch_mouse_independent: bool,
+    pub stylus_mouse_independent: bool,
     pub restore_keyboard_focus: bool,
     pub focus_restore_delay: i32,
     pub focus_restore_on_mouse_move: bool,
@@ -143,6 +144,7 @@ impl Default for ZonesLayout {
             loop_y: false,
             virtual_layout: false,
             touch_mouse_independent: false,
+            stylus_mouse_independent: false,
             restore_keyboard_focus: false,
             focus_restore_delay: 120,
             focus_restore_on_mouse_move: false,

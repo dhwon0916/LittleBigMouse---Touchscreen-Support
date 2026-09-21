@@ -80,6 +80,15 @@ pub struct Shared {
 }
 
 impl Shared {
+    /// Whether touchscreen policy should participate in the current input path.
+    pub fn touch_active(&self) -> bool {
+        use std::sync::atomic::Ordering;
+        self.touch_mouse_independent.load(Ordering::SeqCst)
+            && self.want_hook.load(Ordering::SeqCst)
+            && !self.paused.load(Ordering::SeqCst)
+            && !self.suspended.load(Ordering::SeqCst)
+    }
+
     pub fn new() -> Self {
         Shared {
             hooked: AtomicBool::new(false),

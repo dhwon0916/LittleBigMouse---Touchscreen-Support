@@ -226,6 +226,7 @@ fn options(layout: &Layout) -> Value {
         "BorderValues": o.border_values,
         "RescueShortcut": o.rescue_shortcut,
         "TouchMouseIndependent": o.touch_mouse_independent,
+        "StylusMouseIndependent": o.stylus_mouse_independent,
         "RestoreKeyboardFocus": o.restore_keyboard_focus,
         "FocusRestoreDelay": o.focus_restore_delay,
         "FocusRestoreOnMouseMove": o.focus_restore_on_mouse_move,

@@ -207,6 +207,7 @@ pub fn read_global_options<K: RegistryKey>(root: &K, layout_key: Option<&K>) -> 
             .or_else(|| try_get_bool(root, "ShowAttachDetachWarning")),
         border_values: try_get_string(root, "BorderValues"),
         touch_mouse_independent: try_get_bool(root, "TouchMouseIndependent"),
+        stylus_mouse_independent: try_get_bool(root, "StylusMouseIndependent"),
         restore_keyboard_focus: try_get_bool(root, "RestoreKeyboardFocus"),
         focus_restore_delay: try_get_int(root, "FocusRestoreDelay"),
         focus_restore_on_mouse_move: try_get_bool(root, "FocusRestoreOnMouseMove"),

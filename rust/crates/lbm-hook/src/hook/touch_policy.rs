@@ -3,6 +3,7 @@ use crate::zones::ZonesLayout;
 
 #[derive(Clone, Debug)]
 pub struct TouchPolicy {
+    pub include_stylus: bool,
     pub delay_ms: u64,
     pub on_mouse_move: bool,
     pub all_displays: bool,
@@ -59,30 +60,29 @@ fn apps(value: &str) -> Vec<String> {
         .collect()
 }
 
+fn display_bounds(rect: &str) -> Option<[f64; 4]> {
+    let mut fields = rect.split(',');
+    let mut values = [0.0_f64; 4];
+    for value in &mut values {
+        *value = fields.next()?.parse().ok()?;
+        if !value.is_finite() {
+            return None;
+        }
+    }
+    (fields.next().is_none() && values[2] > 0.0 && values[3] > 0.0).then_some(values)
+}
+
 impl TouchPolicy {
     pub fn from_layout(layout: &ZonesLayout) -> Self {
         Self {
+            include_stylus: layout.stylus_mouse_independent,
             delay_ms: layout.focus_restore_delay.clamp(0, 5000) as u64,
             on_mouse_move: layout.focus_restore_on_mouse_move,
             all_displays: layout.touch_all_displays,
             bounds: layout
                 .touch_display_bounds
                 .split(';')
-                .filter_map(|rect| {
-                    let values: Vec<f64> = rect
-                        .split(',')
-                        .map(str::parse)
-                        .collect::<Result<_, _>>()
-                        .ok()?;
-                    if values.len() != 4
-                        || values.iter().any(|v| !v.is_finite())
-                        || values[2] <= 0.0
-                        || values[3] <= 0.0
-                    {
-                        return None;
-                    }
-                    Some([values[0], values[1], values[2], values[3]])
-                })
+                .filter_map(display_bounds)
                 .collect(),
             modifier: match layout.touch_override_modifier.to_ascii_lowercase().as_str() {
                 "ctrl" => Modifier::Ctrl,
@@ -115,13 +115,16 @@ impl TouchPolicy {
         let Some(path) = path else {
             return false;
         };
-        let name = path
-            .rsplit(['\\', '/'])
-            .next()
-            .unwrap_or(path)
-            .to_ascii_lowercase();
-        !self.keep_apps.contains(&name)
-            && (self.restore_apps.is_empty() || self.restore_apps.contains(&name))
+        let name = path.rsplit(['\\', '/']).next().unwrap_or(path);
+        !self
+            .keep_apps
+            .iter()
+            .any(|app| app.eq_ignore_ascii_case(name))
+            && (self.restore_apps.is_empty()
+                || self
+                    .restore_apps
+                    .iter()
+                    .any(|app| app.eq_ignore_ascii_case(name)))
     }
 }
 
@@ -134,6 +137,25 @@ impl Default for TouchPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn malformed_bounds_never_become_a_selected_display() {
+        for text in [
+            "",
+            "1,2,3",
+            "1,2,3,4,5",
+            "0,0,NaN,1",
+            "0,0,1,inf",
+            "0,0,0,1",
+            "0,0,1,-1",
+        ] {
+            assert_eq!(display_bounds(text), None, "{text}");
+        }
+        assert_eq!(
+            display_bounds("-1920,-100,1920,1080"),
+            Some([-1920.0, -100.0, 1920.0, 1080.0])
+        );
+    }
 
     #[test]
     fn override_survives_modifier_release_and_trailing_moves() {

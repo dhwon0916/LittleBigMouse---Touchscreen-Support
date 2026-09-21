@@ -39,6 +39,7 @@ public static class LayoutDtoMapper
         o.ShowMonitorActionWarning = dto.ShowMonitorActionWarning ?? o.ShowMonitorActionWarning;
         o.BorderValues = dto.BorderValues ?? o.BorderValues;
         o.TouchMouseIndependent = dto.TouchMouseIndependent ?? o.TouchMouseIndependent;
+        o.StylusMouseIndependent = dto.StylusMouseIndependent ?? o.StylusMouseIndependent;
         o.RestoreKeyboardFocus = dto.RestoreKeyboardFocus ?? o.RestoreKeyboardFocus;
         o.FocusRestoreDelay = dto.FocusRestoreDelay ?? o.FocusRestoreDelay;
         o.FocusRestoreOnMouseMove = dto.FocusRestoreOnMouseMove ?? o.FocusRestoreOnMouseMove;
@@ -197,6 +198,7 @@ public static class LayoutDtoMapper
         ShowMonitorActionWarning = o.ShowMonitorActionWarning,
         BorderValues = o.BorderValues,
         TouchMouseIndependent = o.TouchMouseIndependent,
+        StylusMouseIndependent = o.StylusMouseIndependent,
         RestoreKeyboardFocus = o.RestoreKeyboardFocus,
         FocusRestoreDelay = o.FocusRestoreDelay,
         FocusRestoreOnMouseMove = o.FocusRestoreOnMouseMove,

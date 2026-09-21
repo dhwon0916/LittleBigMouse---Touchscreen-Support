@@ -9,6 +9,12 @@ fn touch_separation_is_opt_in_on_the_wire() {
     ] {
         let layout = ZonesLayout::from_xml(&format!("<ZonesLayout {attribute}/>")).unwrap();
         assert_eq!(layout.touch_mouse_independent, expected);
+        let pen_attribute = attribute.replace("TouchMouseIndependent", "StylusMouseIndependent");
+        let pen_layout = littlebigmouse_hook::zones::ZonesLayout::from_xml(&format!(
+            "<ZonesLayout {pen_attribute} />"
+        ))
+        .unwrap();
+        assert_eq!(pen_layout.stylus_mouse_independent, expected);
         let focus_attribute = attribute.replace("TouchMouseIndependent", "RestoreKeyboardFocus");
         let layout = ZonesLayout::from_xml(&format!("<ZonesLayout {focus_attribute}/>")).unwrap();
         assert_eq!(layout.restore_keyboard_focus, expected);

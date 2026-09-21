@@ -61,6 +61,7 @@ public static class ZonesLayoutFactory
         zones.AdjustSpeed = layout.Options.AdjustSpeed;
 
         zones.TouchMouseIndependent = layout.Options.TouchMouseIndependent;
+        zones.StylusMouseIndependent = layout.Options.StylusMouseIndependent;
         zones.RestoreKeyboardFocus = layout.Options.RestoreKeyboardFocus;
         zones.FocusRestoreDelay = layout.Options.FocusRestoreDelay;
         zones.FocusRestoreOnMouseMove = layout.Options.FocusRestoreOnMouseMove;
@@ -73,12 +74,18 @@ public static class ZonesLayoutFactory
         // can still participate in touchscreen focus restoration.
         if (!layout.Options.TouchAllDisplays)
         {
-            var selected = layout.Options.TouchDisplayIds.Split(';');
+            var selected = layout.Options.TouchDisplayIds
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet(StringComparer.Ordinal);
             zones.TouchDisplayBounds = string.Join(";", layout.PhysicalSources
                 .Where(s => s == s.Monitor.ActiveSource && s.Source.AttachedToDesktop
                     && selected.Contains(s.Source.Id))
-                .Select(s => { var b = s.Source.InPixel.Bounds;
-                    return FormattableString.Invariant($"{b.Left},{b.Top},{b.Width},{b.Height}"); }));
+                .Select(s =>
+                {
+                    var bounds = s.Source.InPixel.Bounds;
+                    return FormattableString.Invariant(
+                        $"{bounds.Left},{bounds.Top},{bounds.Width},{bounds.Height}");
+                }));
         }
 
         zones.RescueShortcut = layout.Options.RescueShortcut;

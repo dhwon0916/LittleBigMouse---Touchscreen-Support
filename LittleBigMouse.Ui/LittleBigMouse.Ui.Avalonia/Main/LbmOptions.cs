@@ -290,6 +290,14 @@ public class LbmOptions : SavableReactiveModel, ILayoutOptions
     bool _touchMouseIndependent;
 
     [DataMember]
+    public bool StylusMouseIndependent
+    {
+        get => _stylusMouseIndependent;
+        set => SetUnsavedValue(ref _stylusMouseIndependent, value);
+    }
+    bool _stylusMouseIndependent;
+
+    [DataMember]
     public bool RestoreKeyboardFocus
     {
         get => _restoreKeyboardFocus;

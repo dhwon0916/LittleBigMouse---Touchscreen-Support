@@ -71,6 +71,7 @@ fn same_tracked_options(a: &LayoutOptions, b: &LayoutOptions) -> bool {
         && a.algorithm == b.algorithm
         && a.border_values == b.border_values
         && a.touch_mouse_independent == b.touch_mouse_independent
+        && a.stylus_mouse_independent == b.stylus_mouse_independent
         && a.restore_keyboard_focus == b.restore_keyboard_focus
         && a.focus_restore_delay == b.focus_restore_delay
         && a.focus_restore_on_mouse_move == b.focus_restore_on_mouse_move

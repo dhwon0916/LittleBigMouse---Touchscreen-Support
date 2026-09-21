@@ -9,7 +9,10 @@
 pub mod display;
 pub mod focus_restore;
 pub mod mouse;
+mod native_touch;
 pub mod rescue_key;
+mod touch_contacts;
+mod touch_input;
 pub mod win_events;
 
 use std::sync::atomic::Ordering;

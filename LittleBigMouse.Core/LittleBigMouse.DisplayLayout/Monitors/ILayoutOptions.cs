@@ -43,6 +43,7 @@ public interface ILayoutOptions : INotifyPropertyChanged // Change IPropertyChan
       public string FocusKeepApps { get; set; } = "";
       public string FocusRestoreApps { get; set; } = "";
       public bool TouchMouseIndependent { get; set; }
+      public bool StylusMouseIndependent { get; set; }
       public string RescueShortcut { get; set; } = "Ctrl+Alt+Shift+M";
       public string Priority { get; set; } = "Normal";
       public string PriorityUnhooked { get; set; } = "Below";
@@ -189,6 +190,7 @@ public interface ILayoutOptions : INotifyPropertyChanged // Change IPropertyChan
    string FocusKeepApps { get; set; }
    string FocusRestoreApps { get; set; }
    bool TouchMouseIndependent { get; set; }
+   bool StylusMouseIndependent { get; set; }
    string RescueShortcut { get; set; }
 
 

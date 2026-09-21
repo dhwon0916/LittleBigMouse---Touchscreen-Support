@@ -6,6 +6,7 @@ namespace LittleBigMouse.Zoning
     public class ZonesLayout : IZonesSerializable
     {
         public bool TouchMouseIndependent {get;set;}
+        public bool StylusMouseIndependent {get;set;}
         public bool RestoreKeyboardFocus {get;set;}
         public int FocusRestoreDelay { get; set; } = 120;
         public bool FocusRestoreOnMouseMove { get; set; } = false;
@@ -80,6 +81,7 @@ namespace LittleBigMouse.Zoning
                 e => e.Virtual,
                 e => e.RescueShortcut,
                 e => e.TouchMouseIndependent,
+                e => e.StylusMouseIndependent,
                 e => e.RestoreKeyboardFocus,
                 e => e.FocusRestoreDelay,
                 e => e.FocusRestoreOnMouseMove,

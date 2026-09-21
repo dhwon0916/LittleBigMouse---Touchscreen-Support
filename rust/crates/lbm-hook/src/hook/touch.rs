@@ -11,6 +11,51 @@ pub fn is_pen(extra: usize) -> bool {
     extra & 0xffff_ff80 == 0xff51_5700
 }
 
+/// Fallback for native touch that has no promoted mouse messages. The adapter
+/// must supply positive touchscreen evidence; a large mouse delta is not enough.
+/// Keep the original anchor across a burst and let promoted events own policy
+/// when they are available. An override anywhere in a native burst cancels it.
+#[derive(Clone, Copy, Default)]
+pub struct NativeTouchResume {
+    saved: Option<(i32, i32)>,
+    bypass: bool,
+    promoted: bool,
+}
+
+impl NativeTouchResume {
+    pub const fn new() -> Self {
+        Self {
+            saved: None,
+            bypass: false,
+            promoted: false,
+        }
+    }
+
+    pub fn observe(&mut self, cursor: Option<(i32, i32)>, allowed: bool) {
+        self.bypass |= !allowed;
+        if !self.promoted && !self.bypass && self.saved.is_none() {
+            self.saved = cursor;
+        }
+    }
+
+    pub fn promoted(&mut self) {
+        self.promoted = true;
+        self.saved = None;
+    }
+
+    pub fn target(&self, selected_display: bool) -> Option<(i32, i32)> {
+        if self.bypass || self.promoted || !selected_display {
+            None
+        } else {
+            self.saved
+        }
+    }
+
+    pub fn pending(&self) -> bool {
+        self.target(true).is_some()
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 pub struct TouchResume {
     saved: Option<(i32, i32)>,
@@ -61,6 +106,40 @@ impl TouchResume {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_taps_keep_the_original_anchor_until_physical_input() {
+        let mut state = NativeTouchResume::new();
+        assert_eq!(state.target(true), None);
+        state.observe(Some((1600, 873)), true);
+        state.observe(Some((2662, 2547)), true);
+        assert_eq!(state.target(true), Some((1600, 873)));
+        assert_eq!(state.target(false), None);
+        state = NativeTouchResume::new(); // physical movement, click, reset, or pen
+        assert_eq!(state.target(true), None);
+    }
+
+    #[test]
+    fn native_override_cannot_rearm_when_modifier_is_released() {
+        let mut state = NativeTouchResume::new();
+        state.observe(Some((10, 20)), true);
+        state.observe(Some((10, 20)), false);
+        state.observe(Some((10, 20)), true);
+        assert_eq!(state.target(true), None);
+    }
+
+    #[test]
+    fn promoted_policy_wins_regardless_of_raw_message_order() {
+        for raw_first in [false, true] {
+            let mut state = NativeTouchResume::new();
+            if raw_first {
+                state.observe(Some((10, 20)), true);
+            }
+            state.promoted();
+            state.observe(Some((10, 20)), true);
+            assert_eq!(state.target(true), None);
+        }
+    }
 
     #[test]
     fn signatures_distinguish_mouse_pen_and_touch() {
