@@ -121,6 +121,9 @@ unsafe extern "system" fn wnd_proc(
         }
         WM_SETTINGCHANGE if wparam.0 as u32 == SPI_SETWORKAREA.0 => {
             crate::hook::guard(|| {
+                if super::touch_input::preserve_on_work_area_change() {
+                    return;
+                }
                 if let Some(shared) = SHARED.get() {
                     crate::hook::on_setting_changed(shared);
                 }

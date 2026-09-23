@@ -123,6 +123,37 @@ pub fn finish_native_focus() {
     }
 }
 
+/// An AppBar swipe can change the work area after finger-up. Routing uses full
+/// monitor bounds, not the work area. Avoid a teardown/reload that would erase
+/// the pending return when those bounds are demonstrably unchanged.
+pub fn preserve_on_work_area_change() -> bool {
+    SHARED.get().is_some_and(preserve_work_area_return)
+}
+
+fn preserve_work_area_return(shared: &crate::shared::Shared) -> bool {
+    sync_generation(shared);
+    if !shared.touch_active()
+        || !shared.hooked.load(Ordering::SeqCst)
+        || !(TOUCH.with(|v| v.get().pending()) || NATIVE.with(|v| v.get().pending()))
+    {
+        return false;
+    }
+    let Some(monitors) = (shared.monitors_now)() else {
+        return false;
+    };
+    let Ok(engine) = shared.engine.try_lock() else {
+        return false;
+    };
+    let layout = &engine.layout;
+    !layout.virtual_layout
+        && !monitors.is_empty()
+        && layout.main_zones.len() == monitors.len()
+        && layout.main_zones.iter().all(|id| {
+            let bounds = layout.arena[*id].pixels_bounds();
+            monitors.contains(&bounds)
+        })
+}
+
 /// None continues monitor routing; Some passes through or consumes the event.
 pub fn process(message: u32, ms: &MSLLHOOKSTRUCT) -> Option<bool> {
     process_with_shared(SHARED.get()?, message, ms)
@@ -261,7 +292,7 @@ fn on_promoted_touch(shared: &crate::shared::Shared, message: u32, ms: &MSLLHOOK
     // Hover preserves mouse position but must not repeatedly steal typing focus.
     // Contact movement cancels a pending focus attempt until the pen lifts.
     if !is_pen(ms.dwExtraInfo) || message != WM_MOUSEMOVE || GESTURE.with(|v| v.get().contact) {
-        super::focus_restore::on_touch(shared, message, ms.pt, ms.time);
+        super::focus_restore::on_touch(shared, message, ms.pt);
     }
     // Use the last mouse position, including LBM's border warps.
     // The OS cursor may already reflect a preceding touch message.
@@ -293,6 +324,63 @@ mod tests {
         shared.want_hook.store(true, Ordering::SeqCst);
         shared.hooked.store(true, Ordering::SeqCst);
         shared
+    }
+
+    #[test]
+    fn appbar_work_area_change_preserves_return_only_for_unchanged_monitors() {
+        use crate::geometry::Rect;
+        let mut shared = enabled();
+        shared.monitors_now = || Some(vec![Rect::new(0, 0, 1920, 1080)]);
+        let layout = crate::zones::ZonesLayout::from_xml(concat!(
+            "<ZonesLayout><MainZones><Zone Id=\"0\" Name=\"Main\">",
+            "<PixelsBounds><Rect Left=\"0\" Top=\"0\" Width=\"1920\" Height=\"1080\"/></PixelsBounds>",
+            "<PhysicalBounds><Rect Left=\"0\" Top=\"0\" Width=\"344\" Height=\"194\"/></PhysicalBounds>",
+            "</Zone></MainZones></ZonesLayout>"
+        )).unwrap();
+        shared.engine.lock().unwrap().load(layout);
+        assert!(!preserve_work_area_return(&shared));
+        observe_native(&shared);
+        assert!(preserve_work_area_return(&shared));
+        assert_eq!(NATIVE.with(|v| v.get().target(true)), Some((1600, 873)));
+
+        // A promoted swipe is protected too, including a drag still in contact.
+        NATIVE.with(|v| v.set(NativeTouchResume::new()));
+        TOUCH.with(|v| {
+            let mut touch = TouchResume::new();
+            touch.touch(Some((1600, 873)), true, false);
+            v.set(touch);
+        });
+        assert!(preserve_work_area_return(&shared));
+        shared.monitors_now = || Some(vec![Rect::new(1, 0, 1920, 1080)]);
+        assert!(!preserve_work_area_return(&shared));
+        shared.monitors_now = || Some(vec![Rect::new(0, 0, 1920, 1200)]);
+        assert!(!preserve_work_area_return(&shared));
+        shared.monitors_now = || Some(Vec::new());
+        assert!(!preserve_work_area_return(&shared));
+        shared.monitors_now = || None;
+        assert!(!preserve_work_area_return(&shared));
+        shared.monitors_now = || Some(vec![Rect::new(0, 0, 1920, 1080)]);
+        shared.paused.store(true, Ordering::SeqCst);
+        assert!(!preserve_work_area_return(&shared));
+        shared.paused.store(false, Ordering::SeqCst);
+        shared.hooked.store(false, Ordering::SeqCst);
+        assert!(!preserve_work_area_return(&shared));
+        shared.hooked.store(true, Ordering::SeqCst);
+        shared.engine.lock().unwrap().layout.virtual_layout = true;
+        assert!(!preserve_work_area_return(&shared));
+        shared.engine.lock().unwrap().layout.virtual_layout = false;
+        {
+            let _busy = shared.engine.lock().unwrap();
+            assert!(!preserve_work_area_return(&shared));
+        }
+        assert!(preserve_work_area_return(&shared));
+        shared
+            .touch_mouse_independent
+            .store(false, Ordering::SeqCst);
+        assert!(!preserve_work_area_return(&shared));
+        shared.touch_mouse_independent.store(true, Ordering::SeqCst);
+        shared.touch_generation.fetch_add(1, Ordering::SeqCst);
+        assert!(!preserve_work_area_return(&shared));
     }
 
     #[test]

@@ -157,6 +157,9 @@ Hardware acceptance checks (still required):
 7. Restart LittleBigMouse and confirm the saved option is retained.
 
 The user confirmed ordinary touchscreen restoration and the native AppBar fix.
+AppBar swipe restoration also preserves pending mouse/focus state when only the
+work area changes, and resolves the activated panel after it moves away from the
+touch release point. See [the recorded issue and validation](issues/appbar-swipe-restoration.md).
 The temporary per-move diagnostic recorder has been removed from the production
 hook. Automated tests include mixed native/promoted input, injected movement,
 busy-engine retries, and cancellation. Hardware acceptance should be repeated

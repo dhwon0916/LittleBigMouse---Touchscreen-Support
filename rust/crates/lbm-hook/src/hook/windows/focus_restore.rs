@@ -109,11 +109,32 @@ pub fn finish_native(shared: &Shared, point: POINT) {
         );
         return;
     }
-    let touched = identity(unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) });
-    ORIGIN.with(|v| v.set(before_touch(capture.current, capture.previous, touched)));
+    let hit = identity(unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) });
+    let origin = before_touch(capture.current, capture.previous, hit);
+    // A swipe may hide/reposition an AppBar before the settling timer runs.
+    // Hit-testing then finds the desktop behind it, not the app that took focus.
+    // Input is still unchanged since release (checked above); prefer that active
+    // window when it differs from the captured origin. The worker still checks
+    // exact identities, input time, generation, and the touched app's rules.
+    let touched = native_release_target(
+        origin.map(|snapshot| snapshot.window),
+        hit,
+        identity(unsafe { GetForegroundWindow() }),
+    );
+    ORIGIN.with(|v| v.set(origin));
     LAST_REQUEST.with(|v| v.set(0));
     trace("native touch: scheduling settled release");
-    on_touch(shared, WM_LBUTTONUP, point, 0);
+    on_touch_window(shared, WM_LBUTTONUP, || touched);
+}
+
+fn native_release_target(
+    origin: Option<WindowIdentity>,
+    hit: Option<WindowIdentity>,
+    foreground: Option<WindowIdentity>,
+) -> Option<WindowIdentity> {
+    foreground
+        .filter(|window| origin.is_some() && Some(*window) != origin)
+        .or(hit)
 }
 
 fn hwnd(identity: WindowIdentity) -> HWND {
@@ -448,11 +469,24 @@ pub fn on_physical_input(shared: &Shared, is_move: bool, in_contact: bool) {
 
 /// Tagged touch reports only. Capture before promotion when possible, retain the
 /// editor throughout a burst, and sample the SAME idle API used by the worker.
-pub fn on_touch(shared: &Shared, message: u32, point: POINT, _mouse_timestamp: u32) {
+pub fn on_touch(shared: &Shared, message: u32, point: POINT) {
+    on_touch_window(shared, message, || {
+        identity(unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) })
+    });
+}
+
+fn on_touch_window(
+    shared: &Shared,
+    message: u32,
+    resolve_touched: impl FnOnce() -> Option<WindowIdentity>,
+) {
     if !active(shared) {
         reset();
         return;
     }
+    // Resolve lazily: focus restoration is optional, and disabled touch events
+    // should not hit-test windows or query their owning processes.
+    let touched = resolve_touched();
     let last = LAST_REQUEST.with(Cell::get);
     if last != 0 && COMPLETED.load(Ordering::SeqCst) >= last {
         ORIGIN.with(|origin| origin.set(None));
@@ -464,7 +498,6 @@ pub fn on_touch(shared: &Shared, message: u32, point: POINT, _mouse_timestamp: u
     } else if message == WM_LBUTTONUP {
         RELEASED.with(|released| released.set(true));
     }
-    let touched = identity(unsafe { GetAncestor(WindowFromPoint(point), GA_ROOT) });
     ORIGIN.with(|origin| {
         if origin.get().is_none() {
             origin.set(before_touch(
@@ -518,6 +551,31 @@ mod tests {
         CreateWindowExW, DestroyWindow, DispatchMessageW, TranslateMessage, PM_REMOVE,
         WINDOW_EX_STYLE, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_TABSTOP, WS_VISIBLE,
     };
+
+    #[test]
+    fn disabled_focus_does_not_resolve_the_touched_window() {
+        on_touch_window(&Shared::new(), WM_LBUTTONUP, || {
+            panic!("disabled focus must not query the touched window")
+        });
+    }
+
+    #[test]
+    fn native_swipe_uses_activated_panel_after_it_moves_away_from_release_point() {
+        let window = |handle| WindowIdentity {
+            handle,
+            process: 10,
+            thread: 20,
+        };
+        let origin = Some(window(1));
+        let desktop = Some(window(2));
+        let panel = Some(window(3));
+        assert_eq!(native_release_target(origin, desktop, panel), panel);
+        assert_eq!(native_release_target(origin, None, panel), panel);
+        // A nonactivating touch still uses hit-testing, never the original editor.
+        assert_eq!(native_release_target(origin, panel, origin), panel);
+        assert_eq!(native_release_target(origin, panel, None), panel);
+        assert_eq!(native_release_target(None, desktop, panel), desktop);
+    }
 
     struct TestWindows {
         original: HWND,
@@ -792,6 +850,29 @@ mod tests {
         );
         wait_for_editor();
         println!("Native touch release restored the original editor");
+
+        // AppBar swipes can leave no panel beneath the release point while a
+        // different panel window remains foreground. Exercise real activation
+        // with deliberately stale hit-testing, not just the target selector.
+        reset();
+        assert!(!native_contact(shared, true));
+        let queue = InputAttachment::new(request.touched.thread);
+        unsafe {
+            let _ = SetForegroundWindow(hwnd(request.touched));
+        }
+        drop(queue);
+        assert!(native_contact(shared, false));
+        let stale_point = POINT {
+            x: -30000,
+            y: -30000,
+        };
+        assert_ne!(
+            identity(unsafe { GetAncestor(WindowFromPoint(stale_point), GA_ROOT) }),
+            Some(request.touched)
+        );
+        finish_native(shared, stale_point);
+        wait_for_editor();
+        println!("Native swipe with stale hit-testing restored the original editor");
 
         // Exercise queue attachment/detachment and process-handle ownership in
         // the production restoration path after the worker has warmed up.
